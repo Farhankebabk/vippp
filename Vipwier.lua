@@ -156,9 +156,9 @@ end
 local win
 pcall(function()
     win = ui:CreateWindow({
-        Title          = "V1PRWARE",
+        Title          = "Kebahscript",
         Icon           = "sparkles",
-        Author         = "V1pr & Mitsuki",
+        Author         = "Kebab",
         Folder         = "v1prware",
         Size           = UDim2.fromOffset(350, 480),
         Transparent    = false,
