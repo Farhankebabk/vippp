@@ -1606,7 +1606,143 @@ end -- tabKiller
 -- ============================================================
 
 print("[v1prware] All tabs loaded successfully (with Instant Generator)")
+-- ============================================================
+-- ESP RINGAN UNTUK FORSAKEN (KILLER MERAH, SURVIVOR HIJAU)
+-- ============================================================
+do -- tabESP (Ringan)
+    local tabESP = win:Tab({ Title = "ESP", Icon = "eye" })
+    local secESP = tabESP:Section({ Title = "Visuals", Opened = true })
 
+    local espOn = false
+    local espList = {}  -- Menyimpan koneksi dan objek untuk cleanup
+
+    -- Warna
+    local RED = Color3.fromRGB(255, 0, 0)
+    local GREEN = Color3.fromRGB(0, 255, 0)
+
+    -- ============================================================
+    -- FUNGSI UTAMA ESP
+    -- ============================================================
+    local function createESP(character, isKiller)
+        if not character then return end
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local color = isKiller and RED or GREEN
+
+        -- BillboardGui minimal
+        local gui = Instance.new("BillboardGui")
+        gui.Name = "ESP_Lite"
+        gui.Size = UDim2.new(0, 100, 0, 50)
+        gui.Adornee = hrp
+        gui.AlwaysOnTop = true
+        gui.StudsOffset = Vector3.new(0, 2.5, 0)
+        gui.Parent = character
+        table.insert(espList, gui)
+
+        -- Box tipis
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0, 50, 0, 60)
+        frame.Position = UDim2.new(0.5, -25, 0, 0)
+        frame.BackgroundTransparency = 0.4
+        frame.BackgroundColor3 = color
+        frame.BorderSizePixel = 1
+        frame.BorderColor3 = color
+        frame.Parent = gui
+
+        -- Hanya nama (tanpa health bar, tanpa jarak)
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1, 0, 0, 16)
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextScaled = true
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.Text = character.Parent and character.Parent.Name or ""
+        nameLabel.Parent = frame
+
+        return gui
+    end
+
+    -- ============================================================
+    -- MANAJEMEN ESP
+    -- ============================================================
+    local function clearESP()
+        for _, obj in ipairs(espList) do
+            pcall(function()
+                if obj:IsA("Connection") then obj:Disconnect()
+                elseif obj:IsA("Instance") then obj:Destroy() end
+            end)
+        end
+        espList = {}
+    end
+
+    local function refreshESP()
+        clearESP()
+        if not espOn then return end
+
+        local myChar = lp.Character
+        if not myChar then return end
+
+        local killerFolder = getTeamFolder("Killers")
+        local survivorFolder = getTeamFolder("Survivors")
+
+        local function processFolder(folder, isKiller)
+            if not folder then return end
+            for _, model in ipairs(folder:GetChildren()) do
+                if model:IsA("Model") and model ~= myChar then
+                    local hum = model:FindFirstChildOfClass("Humanoid")
+                    local hrp = model:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp and hum.Health > 0 then
+                        createESP(model, isKiller)
+                    end
+                end
+            end
+        end
+
+        processFolder(killerFolder, true)
+        processFolder(survivorFolder, false)
+
+        -- Hook karakter baru
+        local function onNewCharacter(model)
+            if not espOn then return end
+            if model:IsA("Model") and model ~= myChar then
+                local hum = model:FindFirstChildOfClass("Humanoid")
+                local hrp = model:FindFirstChild("HumanoidRootPart")
+                if hum and hrp and hum.Health > 0 then
+                    local isKiller = killerFolder and model:IsDescendantOf(killerFolder) or false
+                    createESP(model, isKiller)
+                end
+            end
+        end
+
+        if killerFolder then killerFolder.ChildAdded:Connect(onNewCharacter) end
+        if survivorFolder then survivorFolder.ChildAdded:Connect(onNewCharacter) end
+
+        -- Refresh saat karakter berganti
+        lp.CharacterAdded:Connect(function()
+            task.wait(0.5)
+            refreshESP()
+        end)
+    end
+
+    -- ============================================================
+    -- UI CONTROLS
+    -- ============================================================
+    secESP:Toggle({
+        Title = "ESP (Killer=Merah, Survivor=Hijau)",
+        Type = "Checkbox",
+        Flag = "espLite",
+        Default = false,
+        Callback = function(on)
+            espOn = on
+            if on then refreshESP() else clearESP() end
+        end
+    })
+
+    print("[v1prware] ESP Lite loaded")
+end -- end tabESP
+        
 end) -- pcall main
 
 if not success then
